@@ -1,15 +1,28 @@
+// ===== داده‌های خدمات =====
 const servicesData = [
-    { id: 1, title: "آرایش عروس", description: "خاص‌ترین روز زندگیتان", price: "۲,۵۰۰,۰۰۰ تومان", image: "" },
-    { id: 2, title: "میکاپ حرفه‌ای", description: "آرایش روز و مجلسی", price: "۱,۲۰۰,۰۰۰ تومان", image: "" },
-    { id: 3, title: "آموزش آرایش", description: "از مبتدی تا پیشرفته", price: "۸۰۰,۰۰۰ تومان", image: "" },
-    { id: 4, title: "خدمات پوست", description: "مراقبت تخصصی پوست", price: "۹۰۰,۰۰۰ تومان", image: "" }
+    { id: 1, title: "آرایش عروس", description: "خاص‌ترین روز زندگیتان را بی‌نظیر کنید", price: "۲,۵۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=300&fit=crop" },
+    { id: 2, title: "میکاپ حرفه‌ای", description: "آرایش روز و مجلسی با جدیدترین تکنیک‌ها", price: "۱,۲۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&h=300&fit=crop" },
+    { id: 3, title: "آموزش آرایش", description: "از مبتدی تا پیشرفته با مدرک معتبر", price: "۸۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop" },
+    { id: 4, title: "شینیون", description: "مدل‌های شیک و مدرن شینیون", price: "۹۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=400&h=300&fit=crop" }
 ];
 
+// ===== گالری شینیون (عکس‌های باکیفیت از Unsplash) =====
+const galleryData = [
+    { id: 1, title: "شینیون مجلسی", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=600&h=400&fit=crop" },
+    { id: 2, title: "شینیون ساده", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&h=400&fit=crop" },
+    { id: 3, title: "شینیون عروس", image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&h=400&fit=crop" },
+    { id: 4, title: "شینیون مدرن", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=400&fit=crop" },
+    { id: 5, title: "شینیون کلاسیک", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=600&h=400&fit=crop" },
+    { id: 6, title: "شینیون روز", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&h=400&fit=crop" }
+];
+
+// ===== رندر خدمات =====
 function renderServices() {
     const grid = document.getElementById('servicesGrid');
+    if (!grid) return;
     grid.innerHTML = servicesData.map(s => `
         <div class="service-card">
-            <img src="https://via.placeholder.com/400x220/FF6B9D/FFFFFF?text=${s.title}" alt="${s.title}">
+            <img src="${s.image}" alt="${s.title}" loading="lazy">
             <div class="content">
                 <h3>${s.title}</h3>
                 <p>${s.description}</p>
@@ -20,69 +33,43 @@ function renderServices() {
     `).join('');
 }
 
-function bookService(id) {
-    alert('لطفاً ابتدا وارد حساب خود شوید');
-    document.getElementById('loginModal').style.display = 'block';
+// ===== رندر گالری =====
+function renderGallery() {
+    const grid = document.getElementById('galleryGrid');
+    if (!grid) return;
+    grid.innerHTML = galleryData.map(item => `
+        <div class="gallery-item">
+            <img src="${item.image}" alt="${item.title}" loading="lazy">
+            <div class="overlay">
+                <h4>${item.title}</h4>
+            </div>
+        </div>
+    `).join('');
 }
 
-document.getElementById('loginBtn')?.addEventListener('click', () => {
+// ===== رزرو خدمت =====
+function bookService(id) {
+    const service = servicesData.find(s => s.id === id);
+    if (!service) return;
     document.getElementById('loginModal').style.display = 'block';
-});
+    localStorage.setItem('selectedService', JSON.stringify(service));
+}
 
-document.querySelector('.close')?.addEventListener('click', () => {
-    document.getElementById('loginModal').style.display = 'none';
-});
-
-window.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('loginModal')) {
-        document.getElementById('loginModal').style.display = 'none';
-    }
-});
-
-document.querySelector('.hamburger')?.addEventListener('click', function() {
-    document.querySelector('.nav-links').classList.toggle('active');
-});
-
-document.getElementById('backToTop')?.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-
-window.addEventListener('scroll', () => {
-    const btn = document.getElementById('backToTop');
-    if (window.scrollY > 300) btn.style.display = 'block';
-    else btn.style.display = 'none';
-});
-
-// سیستم تخفیف و کاربران
-document.getElementById('loginForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const phone = document.getElementById('phoneInput').value;
-    if (phone.length < 11) {
-        alert('شماره موبایل صحیح نیست');
-        return;
-    }
-    let users = JSON.parse(localStorage.getItem('melikaUsers')) || {};
-    if (!users[phone]) users[phone] = { visitCount: 0 };
-    users[phone].visitCount += 1;
-    localStorage.setItem('melikaUsers', JSON.stringify(users));
-
-    let numbers = JSON.parse(localStorage.getItem('melikaNumbers')) || [];
-    if (!numbers.includes(phone)) numbers.push(phone);
-    localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
-
-    const visit = users[phone].visitCount;
-    let discount = 0;
-    if (visit >= 10) discount = 10;
-    else if (visit >= 5) discount = 7;
-    else if (visit >= 3) discount = 4;
-    else if (visit >= 2) discount = 2;
-
-    document.getElementById('userPhone').textContent = phone;
-    document.getElementById('visitCount').textContent = visit;
-    document.getElementById('discountPercent').textContent = discount + '%';
-    document.getElementById('userInfo').style.display = 'block';
-    alert(`خوش آمدید! تعداد مراجعه: ${visit} - تخفیف شما: ${discount}%`);
-    document.getElementById('loginModal').style.display = 'none';
-});
-
-document.addEventListener('DOMContentLoaded', renderServices);
+// ===== سیستم کاربران =====
+const userManager = {
+    users: JSON.parse(localStorage.getItem('melikaUsers')) || {},
+    
+    addUser(phone) {
+        if (!this.users[phone]) {
+            this.users[phone] = { visitCount: 0, name: '', joinDate: new Date().toISOString() };
+        }
+        this.users[phone].visitCount += 1;
+        this.saveUsers();
+        return this.users[phone];
+    },
+    
+    saveUsers() {
+        localStorage.setItem('melikaUsers', JSON.stringify(this.users));
+    },
+    
+    getDiscount(visitCount) {
