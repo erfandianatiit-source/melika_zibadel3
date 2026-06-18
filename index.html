@@ -9,38 +9,28 @@
 </head>
 <body>
 
-    <!-- ===== ولکام (خوش‌آمدگویی) ===== -->
-    <div id="welcomePopup" class="welcome-popup">
-        <div class="welcome-content">
-            <div class="welcome-icon">👑</div>
-            <h1>به آکادمی ملیکا زیبادل خوش آمدید</h1>
-            <p>زیبایی را با هنر و علم تجربه کنید</p>
-            <p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">تخصص در آرایش عروس، شینیون، میکاپ و آموزش</p>
-            <button onclick="closeWelcome()" class="btn-primary">ورود به سایت</button>
+ <!-- ===== مودال ورود/رزرو ===== -->
+<div id="loginModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+        <h2>🔐 ورود به حساب کاربری</h2>
+        
+        <!-- اطلاعات اضافی برای رزرو (با جاوااسکریپت ساخته میشه) -->
+        <div id="extraReservationInfo"></div>
+        
+        <form id="loginForm">
+            <input type="text" placeholder="شماره موبایل" id="phoneInput" required />
+            <input type="text" placeholder="کد تایید (1234)" id="codeInput" required />
+            <button type="submit" class="btn-primary" style="border:none;cursor:pointer;">ثبت درخواست</button>
+        </form>
+        <div id="userInfo" style="display:none;margin-top:1rem;padding:1rem;background:#faf0f5;border-radius:10px;">
+            <h3>✅ اطلاعات کاربر</h3>
+            <p>شماره: <span id="userPhone"></span></p>
+            <p>تعداد مراجعه: <span id="visitCount">0</span></p>
+            <p>تخفیف: <span id="discountPercent">0%</span></p>
         </div>
     </div>
-
-    <header class="header">
-        <nav class="navbar">
-            <div class="logo">
-                <h1>💄 ملیکا زیبادل</h1>
-            </div>
-            <ul class="nav-links">
-                <li><a href="#home">خانه</a></li>
-                <li><a href="#services">خدمات</a></li>
-                <li><a href="#gallery">گالری</a></li>
-                <li><a href="#about">درباره ما</a></li>
-                <li><a href="#contact">تماس</a></li>
-                <li><a href="#" id="loginBtn" class="btn-login"><i class="fas fa-user"></i> ورود</a></li>
-                <li><a href="admin.html" class="btn-login" style="background: #FFD700; color: #1a0a1a;">پنل ادمین</a></li>
-            </ul>
-            <div class="hamburger">
-                <span></span><span></span><span></span>
-            </div>
-        </nav>
-    </header>
-
-    <main>
+</div>
         <!-- صفحه اصلی -->
         <section id="home" class="hero">
             <div class="hero-content">
