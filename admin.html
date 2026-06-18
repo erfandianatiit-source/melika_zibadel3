@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل ادمین - آکادمی ملیکا زیبادل</title>
+    <link rel="stylesheet" href="admin-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>👑 پنل ادمین</h2>
+                <p>آکادمی ملیکا زیبادل</p>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active" data-tab="dashboard"><i class="fas fa-chart-pie"></i> داشبورد</li>
+                    <li data-tab="users"><i class="fas fa-users"></i> کاربران</li>
+                    <li data-tab="numbers"><i class="fas fa-phone"></i> شماره‌ها</li>
+                    <li data-tab="contacts"><i class="fas fa-envelope"></i> پیام‌ها</li>
+                    <li data-tab="gallery"><i class="fas fa-images"></i> گالری</li>
+                    <li data-tab="discounts"><i class="fas fa-percent"></i> تخفیف‌ها</li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="admin-main">
+            <header>
+                <h1 id="pageTitle">📊 داشبورد</h1>
+                <div class="admin-info">
+                    <span>خوش آمدید، ادمین</span>
+                    <button onclick="logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+            
+            <div class="content" id="adminContent"></div>
+        </main>
+    </div>
+    
+    <script src="admin-script.js"></script>
+</body>
+</html>
