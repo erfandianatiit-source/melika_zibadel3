@@ -17,9 +17,10 @@
             <ul class="nav-links">
                 <li><a href="#home">خانه</a></li>
                 <li><a href="#services">خدمات</a></li>
+                <li><a href="#gallery">گالری</a></li>
                 <li><a href="#about">درباره ما</a></li>
                 <li><a href="#contact">تماس</a></li>
-                <li><a href="#" id="loginBtn" class="btn-login">ورود</a></li>
+                <li><a href="#" id="loginBtn" class="btn-login"><i class="fas fa-user"></i> ورود</a></li>
             </ul>
             <div class="hamburger">
                 <span></span><span></span><span></span>
@@ -28,7 +29,7 @@
     </header>
 
     <main>
-
+        <!-- صفحه اصلی -->
         <section id="home" class="hero">
             <div class="hero-content">
                 <h1 class="glow-text">به آکادمی ملیکا زیبادل خوش آمدید</h1>
@@ -43,15 +44,24 @@
                     <div class="shape shape1"></div>
                     <div class="shape shape2"></div>
                     <div class="shape shape3"></div>
+                    <div class="shape shape4"></div>
                 </div>
             </div>
         </section>
 
+        <!-- خدمات -->
         <section id="services" class="services">
             <h2 class="section-title">خدمات ما</h2>
             <div class="services-grid" id="servicesGrid"></div>
         </section>
 
+        <!-- گالری شینیون -->
+        <section id="gallery" class="gallery">
+            <h2 class="section-title">گالری شینیون</h2>
+            <div class="gallery-grid" id="galleryGrid"></div>
+        </section>
+
+        <!-- درباره ما -->
         <section id="about" class="about">
             <div class="about-content">
                 <h2>درباره آکادمی ملیکا زیبادل</h2>
@@ -64,20 +74,22 @@
             </div>
         </section>
 
+        <!-- تماس -->
         <section id="contact" class="contact">
             <h2>تماس با ما</h2>
             <div class="contact-container">
-                <form class="contact-form">
-                    <input type="text" placeholder="نام و نام خانوادگی" required />
-                    <input type="tel" placeholder="شماره تماس" required />
-                    <select required>
+                <form class="contact-form" id="contactForm">
+                    <input type="text" placeholder="نام و نام خانوادگی" id="fullName" required />
+                    <input type="tel" placeholder="شماره تماس" id="phoneNumber" required />
+                    <select id="serviceSelect" required>
                         <option value="">انتخاب خدمت</option>
-                        <option>آرایش عروس</option>
-                        <option>آرایش مجالس</option>
-                        <option>میکاپ روز</option>
-                        <option>آموزش آرایش</option>
+                        <option value="آرایش عروس">آرایش عروس</option>
+                        <option value="آرایش مجالس">آرایش مجالس</option>
+                        <option value="میکاپ روز">میکاپ روز</option>
+                        <option value="آموزش آرایش">آموزش آرایش</option>
+                        <option value="شینیون">شینیون</option>
                     </select>
-                    <textarea placeholder="پیام شما..."></textarea>
+                    <textarea placeholder="پیام شما..." id="messageText"></textarea>
                     <button type="submit" class="btn-primary">ارسال پیام</button>
                 </form>
                 <div class="contact-info">
@@ -92,16 +104,16 @@
                 </div>
             </div>
         </section>
-
     </main>
 
+    <!-- مودال ورود -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>ورود به حساب کاربری</h2>
             <form id="loginForm">
                 <input type="text" placeholder="شماره موبایل" id="phoneInput" required />
-                <input type="password" placeholder="کد تایید" id="codeInput" required />
+                <input type="password" placeholder="کد تایید (1234)" id="codeInput" required />
                 <button type="submit" class="btn-primary">ورود</button>
             </form>
             <div id="userInfo" style="display: none;">
@@ -113,6 +125,7 @@
         </div>
     </div>
 
+    <!-- دکمه بازگشت -->
     <button id="backToTop" class="back-to-top"><i class="fas fa-arrow-up"></i></button>
 
     <script src="script.js"></script>
