@@ -1,6 +1,7 @@
 // ===== بستن ولکام =====
 function closeWelcome() {
-    document.getElementById('welcomePopup').style.display = 'none';
+    const popup = document.getElementById('welcomePopup');
+    if (popup) popup.style.display = 'none';
 }
 
 // ===== داده‌های خدمات =====
@@ -30,7 +31,7 @@ function renderServices() {
                 <h3>${s.title}</h3>
                 <p>${s.description}</p>
                 <span class="price">${s.price}</span>
-                <button class="btn-primary" onclick="bookService(${s.id})">رزرو کنید</button>
+                <button class="btn-primary" onclick="openReservation(${s.id})" style="border:none;cursor:pointer;">رزرو کنید</button>
             </div>
         </div>
     `).join('');
@@ -48,16 +49,50 @@ function renderGallery() {
     `).join('');
 }
 
-// ===== رزرو خدمت =====
-function bookService(id) {
+// ===== باز کردن فرم رزرو =====
+function openReservation(id) {
     const service = servicesData.find(s => s.id === id);
     if (!service) return;
     
-    // باز کردن مودال ورود
-    document.getElementById('loginModal').style.display = 'block';
-    
     // ذخیره خدمت انتخاب شده
     localStorage.setItem('selectedService', JSON.stringify(service));
+    
+    // باز کردن مودال ورود
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.style.display = 'block';
+    
+    // نمایش پیام در مودال
+    const modalTitle = document.querySelector('#loginModal h2');
+    if (modalTitle) {
+        modalTitle.textContent = `📋 رزرو ${service.title}`;
+    }
+    
+    // نمایش توضیحات اضافی
+    let extraInfo = document.getElementById('extraReservationInfo');
+    if (!extraInfo) {
+        extraInfo = document.createElement('div');
+        extraInfo.id = 'extraReservationInfo';
+        extraInfo.style.cssText = `
+            background: #fef9e7;
+            border-right: 4px solid #f39c12;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+            color: #7d6608;
+            line-height: 1.8;
+        `;
+        const modalContent = document.querySelector('#loginForm');
+        if (modalContent) {
+            modalContent.parentNode.insertBefore(extraInfo, modalContent);
+        }
+    }
+    extraInfo.innerHTML = `
+        <strong>📌 نکات مهم:</strong><br>
+        ✅ پس از ثبت درخواست، ادمین با شما هماهنگ می‌کند.<br>
+        ✅ در صورت تایم خالی، پیامک تایید برای شما ارسال می‌شود.<br>
+        ✅ در صورت استفاده مجدد، تخفیف ویژه به شما تعلق می‌گیرد.
+    `;
 }
 
 // ===== سیستم کاربران =====
@@ -89,148 +124,232 @@ const userManager = {
     }
 };
 
-// ===== ورود =====
-document.getElementById('loginForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const phone = document.getElementById('phoneInput').value;
-    const code = document.getElementById('codeInput').value;
+// ===== رویدادهای صفحه =====
+document.addEventListener('DOMContentLoaded', function() {
     
-    if (phone.length < 11) {
-        alert('لطفاً شماره موبایل را به درستی وارد کنید!');
-        return;
+    // ===== دکمه ورود =====
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modal = document.getElementById('loginModal');
+            if (modal) modal.style.display = 'block';
+            
+            // بازنشانی عنوان مودال
+            const modalTitle = document.querySelector('#loginModal h2');
+            if (modalTitle) modalTitle.textContent = '🔐 ورود به حساب کاربری';
+            
+            // مخفی کردن اطلاعات اضافی
+            const extraInfo = document.getElementById('extraReservationInfo');
+            if (extraInfo) extraInfo.style.display = 'none';
+        });
     }
-    
-    if (code !== '1234') {
-        alert('کد تایید اشتباه است! (کد صحیح: 1234)');
-        return;
+
+    // ===== بستن مودال =====
+    const closeBtn = document.getElementById('closeModal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            const modal = document.getElementById('loginModal');
+            if (modal) modal.style.display = 'none';
+        });
     }
-    
-    // اضافه کردن کاربر
-    const user = userManager.addUser(phone);
-    const discount = userManager.getDiscount(user.visitCount);
-    
-    // نمایش اطلاعات کاربر
-    document.getElementById('userPhone').textContent = phone;
-    document.getElementById('visitCount').textContent = user.visitCount;
-    document.getElementById('discountPercent').textContent = discount + '%';
-    document.getElementById('userInfo').style.display = 'block';
-    
-    // ذخیره شماره در لیست
-    let numbers = JSON.parse(localStorage.getItem('melikaNumbers')) || [];
-    if (!numbers.includes(phone)) {
-        numbers.push(phone);
-        localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
+
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('loginModal');
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // ===== فرم ورود/رزرو =====
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const phone = document.getElementById('phoneInput').value;
+            const code = document.getElementById('codeInput').value;
+            
+            if (phone.length < 11) {
+                alert('❌ لطفاً شماره موبایل را به درستی وارد کنید!');
+                return;
+            }
+            
+            if (code !== '1234') {
+                alert('❌ کد تایید اشتباه است! (کد صحیح: 1234)');
+                return;
+            }
+            
+            // ===== اضافه کردن کاربر =====
+            const user = userManager.addUser(phone);
+            const discount = userManager.getDiscount(user.visitCount);
+            
+            // ===== ذخیره شماره =====
+            let numbers = JSON.parse(localStorage.getItem('melikaNumbers')) || [];
+            if (!numbers.includes(phone)) {
+                numbers.push(phone);
+                localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
+            }
+            
+            // ===== بررسی خدمت انتخاب شده =====
+            const selectedService = JSON.parse(localStorage.getItem('selectedService'));
+            
+            // ===== ساخت پیام =====
+            let message = '';
+            let isReservation = false;
+            
+            if (selectedService) {
+                isReservation = true;
+                
+                // ذخیره رزرو
+                let reservations = JSON.parse(localStorage.getItem('melikaReservations')) || [];
+                reservations.push({
+                    name: user.name || 'کاربر',
+                    phone: phone,
+                    service: selectedService.title,
+                    date: new Date().toISOString(),
+                    status: 'pending',
+                    visitCount: user.visitCount,
+                    discount: discount
+                });
+                localStorage.setItem('melikaReservations', JSON.stringify(reservations));
+                
+                // پیام رزرو
+                message = `📋 درخواست رزرو شما برای "${selectedService.title}" ثبت شد!\n\n`;
+                message += `✅ درخواست شما به ادمین ارسال شد.\n`;
+                message += `📞 شماره تماس: ${phone}\n`;
+                message += `⏰ زمان ثبت: ${new Date().toLocaleDateString('fa-IR')}\n\n`;
+                
+                if (discount > 0) {
+                    message += `🎉 **تخفیف ویژه شما:**\n`;
+                    message += `به دلیل ${user.visitCount} بار مراجعه، ${discount}% تخفیف به شما تعلق گرفت!\n`;
+                    message += `💰 این تخفیف در زمان هماهنگی با ادمین اعمال می‌شود.\n\n`;
+                }
+                
+                message += `📌 **مراحل بعدی:**\n`;
+                message += `1️⃣ ادمین با شما تماس می‌گیرد.\n`;
+                message += `2️⃣ در صورت تایم خالی، پیامک تایید برای شما ارسال می‌شود.\n`;
+                message += `3️⃣ تخفیف شما در صورت وجود اعمال می‌شود.\n\n`;
+                message += `🙏 با تشکر از انتخاب شما`;
+                
+                // پاک کردن خدمت انتخاب شده
+                localStorage.removeItem('selectedService');
+                
+            } else {
+                // ورود ساده
+                message = `✅ خوش آمدید!\n`;
+                message += `📞 شماره: ${phone}\n`;
+                message += `📋 تعداد مراجعه: ${user.visitCount}\n`;
+                if (discount > 0) {
+                    message += `🎯 تخفیف شما: ${discount}%\n`;
+                    message += `💡 در صورت رزرو، تخفیف شما اعمال می‌شود.`;
+                } else {
+                    message += `💡 با هر بار مراجعه، به تخفیف نزدیک‌تر می‌شوید.`;
+                }
+            }
+            
+            // ===== نمایش اطلاعات کاربر در مودال =====
+            document.getElementById('userPhone').textContent = phone;
+            document.getElementById('visitCount').textContent = user.visitCount;
+            document.getElementById('discountPercent').textContent = discount + '%';
+            document.getElementById('userInfo').style.display = 'block';
+            
+            // ===== نمایش پیام =====
+            alert(message);
+            
+            // ===== بستن مودال =====
+            setTimeout(() => {
+                document.getElementById('loginModal').style.display = 'none';
+                // مخفی کردن اطلاعات اضافی
+                const extraInfo = document.getElementById('extraReservationInfo');
+                if (extraInfo) extraInfo.style.display = 'none';
+                // بازنشانی عنوان مودال
+                const modalTitle = document.querySelector('#loginModal h2');
+                if (modalTitle) modalTitle.textContent = '🔐 ورود به حساب کاربری';
+            }, 2000);
+        });
     }
-    
-    // بررسی خدمت انتخاب شده
-    const selectedService = JSON.parse(localStorage.getItem('selectedService'));
-    if (selectedService) {
-        // ایجاد رزرو
-        const reservation = {
-            name: user.name || 'کاربر',
-            phone: phone,
-            service: selectedService.title,
-            date: new Date().toISOString(),
-            status: 'pending'
-        };
-        let reservations = JSON.parse(localStorage.getItem('melikaReservations')) || [];
-        reservations.push(reservation);
-        localStorage.setItem('melikaReservations', JSON.stringify(reservations));
-        
-        let msg = `✅ رزرو شما برای "${selectedService.title}" ثبت شد!\n`;
-        msg += `📞 شماره تماس: ${phone}\n`;
-        msg += `⏰ زمان ثبت: ${new Date().toLocaleDateString('fa-IR')}\n`;
-        msg += `📌 در اسرع وقت با شما تماس گرفته می‌شود.`;
-        alert(msg);
-        
-        localStorage.removeItem('selectedService');
-    } else {
-        alert(`✅ خوش آمدید!\nتعداد مراجعه: ${user.visitCount}\nتخفیف شما: ${discount}%`);
+
+    // ===== منو همبرگری =====
+    const hamburger = document.querySelector('.hamburger');
+    if (hamburger) {
+        hamburger.addEventListener('click', function() {
+            const nav = document.querySelector('.nav-links');
+            if (nav) nav.classList.toggle('active');
+        });
     }
-    
-    document.getElementById('loginModal').style.display = 'none';
-});
 
-// ===== مودال =====
-document.getElementById('loginBtn')?.addEventListener('click', () => {
-    document.getElementById('loginModal').style.display = 'block';
-});
-
-document.querySelector('.close')?.addEventListener('click', () => {
-    document.getElementById('loginModal').style.display = 'none';
-});
-
-window.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('loginModal')) {
-        document.getElementById('loginModal').style.display = 'none';
+    // ===== دکمه بازگشت به بالا =====
+    const backBtn = document.getElementById('backToTop');
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
     }
-});
 
-// ===== منو همبرگری =====
-document.querySelector('.hamburger')?.addEventListener('click', function() {
-    document.querySelector('.nav-links').classList.toggle('active');
-});
+    window.addEventListener('scroll', function() {
+        const btn = document.getElementById('backToTop');
+        if (btn) {
+            if (window.scrollY > 300) btn.style.display = 'block';
+            else btn.style.display = 'none';
+        }
+    });
 
-// ===== دکمه بازگشت =====
-document.getElementById('backToTop')?.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
+    // ===== انیمیشن شمارنده =====
+    animateNumbers();
 
-window.addEventListener('scroll', () => {
-    const btn = document.getElementById('backToTop');
-    if (window.scrollY > 300) btn.style.display = 'block';
-    else btn.style.display = 'none';
+    // ===== رندر =====
+    renderServices();
+    renderGallery();
+
+    // ===== فرم تماس =====
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('fullName').value;
+            const phone = document.getElementById('phoneNumber').value;
+            const service = document.getElementById('serviceSelect').value;
+            const message = document.getElementById('messageText').value;
+            
+            let contacts = JSON.parse(localStorage.getItem('melikaContacts')) || [];
+            contacts.push({ name, phone, service, message, date: new Date().toISOString() });
+            localStorage.setItem('melikaContacts', JSON.stringify(contacts));
+            
+            let numbers = JSON.parse(localStorage.getItem('melikaNumbers')) || [];
+            if (!numbers.includes(phone)) {
+                numbers.push(phone);
+                localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
+            }
+            
+            alert('✅ پیام شما با موفقیت ارسال شد!\nدر اسرع وقت با شما تماس گرفته می‌شود.');
+            this.reset();
+        });
+    }
 });
 
 // ===== انیمیشن شمارنده =====
-const counters = document.querySelectorAll('.number');
-counters.forEach(counter => {
-    const updateCount = () => {
-        const target = parseInt(counter.getAttribute('data-count'));
-        const count = parseInt(counter.innerText);
-        const increment = target / 100;
-        if (count < target) {
-            counter.innerText = Math.ceil(count + increment);
-            setTimeout(updateCount, 20);
-        } else {
-            counter.innerText = target + '+';
-        }
-    };
-    const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-            updateCount();
-            observer.disconnect();
-        }
+function animateNumbers() {
+    const counters = document.querySelectorAll('.number');
+    counters.forEach(counter => {
+        const updateCount = () => {
+            const target = parseInt(counter.getAttribute('data-count'));
+            const count = parseInt(counter.innerText);
+            const increment = target / 80;
+            if (count < target) {
+                counter.innerText = Math.ceil(count + increment);
+                setTimeout(updateCount, 20);
+            } else {
+                counter.innerText = target + '+';
+            }
+        };
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                updateCount();
+                observer.disconnect();
+            }
+        });
+        observer.observe(counter);
     });
-    observer.observe(counter);
-});
-
-// ===== فرم تماس =====
-document.getElementById('contactForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const name = document.getElementById('fullName').value;
-    const phone = document.getElementById('phoneNumber').value;
-    const service = document.getElementById('serviceSelect').value;
-    const message = document.getElementById('messageText').value;
-    
-    // ذخیره در localStorage
-    let contacts = JSON.parse(localStorage.getItem('melikaContacts')) || [];
-    contacts.push({ name, phone, service, message, date: new Date().toISOString() });
-    localStorage.setItem('melikaContacts', JSON.stringify(contacts));
-    
-    // ذخیره شماره
-    let numbers = JSON.parse(localStorage.getItem('melikaNumbers')) || [];
-    if (!numbers.includes(phone)) {
-        numbers.push(phone);
-        localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
-    }
-    
-    alert('✅ پیام شما با موفقیت ارسال شد! در اسرع وقت با شما تماس گرفته می‌شود.');
-    this.reset();
-});
-
-// ===== اجرا =====
-document.addEventListener('DOMContentLoaded', () => {
-    renderServices();
-    renderGallery();
-});
+}
