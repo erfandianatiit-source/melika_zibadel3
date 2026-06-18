@@ -11,14 +11,12 @@ const servicesData = [
     { id: 4, title: "شینیون", description: "مدل‌های شیک و مدرن شینیون", price: "۹۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=400&h=300&fit=crop" }
 ];
 
-// ===== گالری شینیون =====
+// ===== گالری =====
 const galleryData = [
     { id: 1, title: "شینیون مجلسی", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=600&h=400&fit=crop" },
     { id: 2, title: "شینیون ساده", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&h=400&fit=crop" },
     { id: 3, title: "شینیون عروس", image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&h=400&fit=crop" },
-    { id: 4, title: "شینیون مدرن", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=400&fit=crop" },
-    { id: 5, title: "شینیون کلاسیک", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=600&h=400&fit=crop" },
-    { id: 6, title: "شینیون روز", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&h=400&fit=crop" }
+    { id: 4, title: "شینیون مدرن", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=400&fit=crop" }
 ];
 
 // ===== رندر خدمات =====
@@ -45,9 +43,7 @@ function renderGallery() {
     grid.innerHTML = galleryData.map(item => `
         <div class="gallery-item">
             <img src="${item.image}" alt="${item.title}" loading="lazy">
-            <div class="overlay">
-                <h4>👑 ${item.title}</h4>
-            </div>
+            <div class="overlay"><h4>👑 ${item.title}</h4></div>
         </div>
     `).join('');
 }
@@ -56,7 +52,11 @@ function renderGallery() {
 function bookService(id) {
     const service = servicesData.find(s => s.id === id);
     if (!service) return;
+    
+    // باز کردن مودال ورود
     document.getElementById('loginModal').style.display = 'block';
+    
+    // ذخیره خدمت انتخاب شده
     localStorage.setItem('selectedService', JSON.stringify(service));
 }
 
@@ -64,11 +64,14 @@ function bookService(id) {
 const userManager = {
     users: JSON.parse(localStorage.getItem('melikaUsers')) || {},
     
-    addUser(phone) {
+    addUser(phone, name = '') {
         if (!this.users[phone]) {
-            this.users[phone] = { visitCount: 0, name: '', joinDate: new Date().toISOString() };
+            this.users[phone] = { visitCount: 0, name: name, joinDate: new Date().toISOString() };
         }
         this.users[phone].visitCount += 1;
+        if (name && !this.users[phone].name) {
+            this.users[phone].name = name;
+        }
         this.saveUsers();
         return this.users[phone];
     },
@@ -102,30 +105,49 @@ document.getElementById('loginForm')?.addEventListener('submit', function(e) {
         return;
     }
     
+    // اضافه کردن کاربر
     const user = userManager.addUser(phone);
     const discount = userManager.getDiscount(user.visitCount);
     
+    // نمایش اطلاعات کاربر
     document.getElementById('userPhone').textContent = phone;
     document.getElementById('visitCount').textContent = user.visitCount;
     document.getElementById('discountPercent').textContent = discount + '%';
     document.getElementById('userInfo').style.display = 'block';
     
-    // ذخیره شماره
+    // ذخیره شماره در لیست
     let numbers = JSON.parse(localStorage.getItem('melikaNumbers')) || [];
     if (!numbers.includes(phone)) {
         numbers.push(phone);
         localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
     }
     
+    // بررسی خدمت انتخاب شده
     const selectedService = JSON.parse(localStorage.getItem('selectedService'));
-    if (selectedService && discount > 0) {
-        const price = parseInt(selectedService.price.replace(/[^0-9]/g, ''));
-        const finalPrice = price - (price * discount / 100);
-        alert(`🎉 تبریک! شما ${discount}% تخفیف دریافت کردید!\nمبلغ نهایی: ${finalPrice.toLocaleString()} تومان`);
+    if (selectedService) {
+        // ایجاد رزرو
+        const reservation = {
+            name: user.name || 'کاربر',
+            phone: phone,
+            service: selectedService.title,
+            date: new Date().toISOString(),
+            status: 'pending'
+        };
+        let reservations = JSON.parse(localStorage.getItem('melikaReservations')) || [];
+        reservations.push(reservation);
+        localStorage.setItem('melikaReservations', JSON.stringify(reservations));
+        
+        let msg = `✅ رزرو شما برای "${selectedService.title}" ثبت شد!\n`;
+        msg += `📞 شماره تماس: ${phone}\n`;
+        msg += `⏰ زمان ثبت: ${new Date().toLocaleDateString('fa-IR')}\n`;
+        msg += `📌 در اسرع وقت با شما تماس گرفته می‌شود.`;
+        alert(msg);
+        
         localStorage.removeItem('selectedService');
+    } else {
+        alert(`✅ خوش آمدید!\nتعداد مراجعه: ${user.visitCount}\nتخفیف شما: ${discount}%`);
     }
     
-    alert(`✅ خوش آمدید!\nتعداد مراجعه: ${user.visitCount}\nتخفیف شما: ${discount}%`);
     document.getElementById('loginModal').style.display = 'none';
 });
 
@@ -203,7 +225,7 @@ document.getElementById('contactForm')?.addEventListener('submit', function(e) {
         localStorage.setItem('melikaNumbers', JSON.stringify(numbers));
     }
     
-    alert('✅ پیام شما با موفقیت ارسال شد!');
+    alert('✅ پیام شما با موفقیت ارسال شد! در اسرع وقت با شما تماس گرفته می‌شود.');
     this.reset();
 });
 
@@ -211,22 +233,4 @@ document.getElementById('contactForm')?.addEventListener('submit', function(e) {
 document.addEventListener('DOMContentLoaded', () => {
     renderServices();
     renderGallery();
-});// ===== بستن ولکام =====
-function closeWelcome() {
-    document.getElementById('welcomePopup').style.display = 'none';
-}
-
-// ===== داده‌های خدمات =====
-const servicesData = [
-    { id: 1, title: "آرایش عروس", description: "خاص‌ترین روز زندگیتان را بی‌نظیر کنید", price: "۲,۵۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=300&fit=crop" },
-    { id: 2, title: "میکاپ حرفه‌ای", description: "آرایش روز و مجلسی با جدیدترین تکنیک‌ها", price: "۱,۲۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&h=300&fit=crop" },
-    { id: 3, title: "آموزش آرایش", description: "از مبتدی تا پیشرفته با مدرک معتبر", price: "۸۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop" },
-    { id: 4, title: "شینیون", description: "مدل‌های شیک و مدرن شینیون", price: "۹۰۰,۰۰۰ تومان", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=400&h=300&fit=crop" }
-];
-
-// ===== گالری شینیون =====
-const galleryData = [
-    { id: 1, title: "شینیون مجلسی", image: "https://images.unsplash.com/photo-1583265709629-6003f291a18a?w=600&h=400&fit=crop" },
-    { id: 2, title: "شینیون ساده", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&h=400&fit=crop" },
-    { id: 3, title: "شینیون عروس", image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&h=400&fit=crop" },
-    { id: 4, title: "شینیون مدرن", image: "
+});
