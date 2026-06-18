@@ -1,22 +1,121 @@
-// ===== تنظیمات ورود =====
+// ===== اطلاعات ورود ادمین =====
 const ADMIN_USER = 'melika';
 const ADMIN_PASS = '137613';
 
+// ===== دیتابیس محلی برای رسانه =====
+let mediaDB = null;
+
+// ===== راه‌اندازی IndexedDB =====
+function initMediaDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('MelikaMediaDB', 1);
+        
+        request.onupgradeneeded = function(event) {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('media')) {
+                const store = db.createObjectStore('media', { keyPath: 'id', autoIncrement: true });
+                store.createIndex('type', 'type', { unique: false });
+                store.createIndex('date', 'date', { unique: false });
+            }
+        };
+        
+        request.onsuccess = function(event) {
+            mediaDB = event.target.result;
+            resolve(mediaDB);
+        };
+        
+        request.onerror = function(event) {
+            reject(event.target.error);
+        };
+    });
+}
+
+// ===== ذخیره رسانه در IndexedDB =====
+function saveMediaToDB(file, type, title) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const data = event.target.result;
+            const transaction = mediaDB.transaction(['media'], 'readwrite');
+            const store = transaction.objectStore('media');
+            const mediaItem = {
+                title: title || file.name,
+                type: type,
+                filename: file.name,
+                data: data,
+                size: file.size,
+                date: new Date().toISOString()
+            };
+            const request = store.add(mediaItem);
+            request.onsuccess = function() {
+                resolve(request.result);
+            };
+            request.onerror = function() {
+                reject(request.error);
+            };
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ===== دریافت همه رسانه‌ها =====
+function getAllMedia() {
+    return new Promise((resolve, reject) => {
+        const transaction = mediaDB.transaction(['media'], 'readonly');
+        const store = transaction.objectStore('media');
+        const request = store.getAll();
+        request.onsuccess = function() {
+            resolve(request.result);
+        };
+        request.onerror = function() {
+            reject(request.error);
+        };
+    });
+}
+
+// ===== حذف رسانه =====
+function deleteMediaFromDB(id) {
+    return new Promise((resolve, reject) => {
+        const transaction = mediaDB.transaction(['media'], 'readwrite');
+        const store = transaction.objectStore('media');
+        const request = store.delete(id);
+        request.onsuccess = function() {
+            resolve();
+        };
+        request.onerror = function() {
+            reject(request.error);
+        };
+    });
+}
+
 // ===== ورود ادمین =====
-document.getElementById('adminLoginForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const user = document.getElementById('adminUser').value;
-    const pass = document.getElementById('adminPass').value;
+document.addEventListener('DOMContentLoaded', function() {
     
-    if (user === ADMIN_USER && pass === ADMIN_PASS) {
-        document.getElementById('loginAdmin').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
-        renderPage('dashboard');
-    } else {
-        document.getElementById('loginError').style.display = 'block';
-        setTimeout(() => {
-            document.getElementById('loginError').style.display = 'none';
-        }, 3000);
+    // راه‌اندازی دیتابیس
+    initMediaDB().catch(console.error);
+    
+    const loginForm = document.getElementById('adminLoginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const user = document.getElementById('adminUser').value.trim();
+            const pass = document.getElementById('adminPass').value.trim();
+            
+            if (user.toLowerCase() === ADMIN_USER.toLowerCase() && pass === ADMIN_PASS) {
+                document.getElementById('loginAdmin').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                renderPage('dashboard');
+            } else {
+                const error = document.getElementById('loginError');
+                error.style.display = 'block';
+                document.getElementById('adminUser').value = '';
+                document.getElementById('adminPass').value = '';
+                setTimeout(() => {
+                    error.style.display = 'none';
+                }, 3000);
+            }
+        });
     }
 });
 
@@ -52,7 +151,8 @@ function renderPage(tab) {
     const title = document.getElementById('pageTitle');
     
     document.querySelectorAll('.sidebar nav li').forEach(li => li.classList.remove('active'));
-    document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
+    const activeTab = document.querySelector(`[data-tab="${tab}"]`);
+    if (activeTab) activeTab.classList.add('active');
     
     switch(tab) {
         case 'dashboard': 
@@ -75,6 +175,10 @@ function renderPage(tab) {
             title.textContent = '📅 رزروها'; 
             content.innerHTML = renderReservations(); 
             break;
+        case 'media': 
+            title.textContent = '🎬 رسانه'; 
+            content.innerHTML = renderMedia(); 
+            break;
         case 'discounts': 
             title.textContent = '🎯 تخفیف‌ها'; 
             content.innerHTML = renderDiscounts(); 
@@ -91,50 +195,30 @@ function renderDashboard() {
     const contacts = getContacts();
     const reservations = getReservations();
     const totalUsers = Object.keys(users).length;
-    const totalVisits = Object.values(users).reduce((sum, u) => sum + u.visitCount, 0);
+    const totalVisits = Object.values(users).reduce((sum, u) => sum + (u.visitCount || 0), 0);
     
     return `
         <div class="dashboard-grid">
-            <div class="stat-card">
-                <div class="icon">👤</div>
-                <div class="number">${totalUsers}</div>
-                <div class="label">کاربران</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon">📋</div>
-                <div class="number">${totalVisits}</div>
-                <div class="label">مراجعات</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon">📱</div>
-                <div class="number">${numbers.length}</div>
-                <div class="label">شماره‌ها</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon">✉️</div>
-                <div class="number">${contacts.length}</div>
-                <div class="label">پیام‌ها</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon">📅</div>
-                <div class="number">${reservations.length}</div>
-                <div class="label">رزروها</div>
-            </div>
+            <div class="stat-card"><div class="icon">👤</div><div class="number">${totalUsers}</div><div class="label">کاربران</div></div>
+            <div class="stat-card"><div class="icon">📋</div><div class="number">${totalVisits}</div><div class="label">مراجعات</div></div>
+            <div class="stat-card"><div class="icon">📱</div><div class="number">${numbers.length}</div><div class="label">شماره‌ها</div></div>
+            <div class="stat-card"><div class="icon">✉️</div><div class="number">${contacts.length}</div><div class="label">پیام‌ها</div></div>
+            <div class="stat-card"><div class="icon">📅</div><div class="number">${reservations.length}</div><div class="label">رزروها</div></div>
         </div>
         <div class="table-container">
             <h3>📋 آخرین رزروها</h3>
+            ${reservations.length === 0 ? '<p style="color:#888;">هیچ رزروی ثبت نشده است.</p>' : `
             <table>
                 <tr><th>نام</th><th>شماره</th><th>خدمت</th><th>تاریخ</th><th>وضعیت</th></tr>
                 ${reservations.slice(-5).reverse().map(r => `
                     <tr>
-                        <td>${r.name}</td>
+                        <td>${r.name || '---'}</td>
                         <td>${r.phone}</td>
                         <td>${r.service}</td>
                         <td>${new Date(r.date).toLocaleDateString('fa-IR')}</td>
                         <td><span class="status-${r.status || 'pending'}">${r.status === 'confirmed' ? '✅ تایید' : r.status === 'cancelled' ? '❌ لغو' : '⏳ در انتظار'}</span></td>
                     </tr>
-                `).join('')}
-            </table>
+                `).join('')}</table>`}
         </div>
     `;
 }
@@ -142,24 +226,17 @@ function renderDashboard() {
 // ===== کاربران =====
 function renderUsers() {
     const users = getUsers();
+    const entries = Object.entries(users);
     return `
         <div class="table-container">
-            <h3>👥 لیست کاربران</h3>
+            <h3>👥 لیست کاربران (${entries.length})</h3>
+            ${entries.length === 0 ? '<p style="color:#888;">هیچ کاربری ثبت نشده است.</p>' : `
             <table>
                 <tr><th>شماره</th><th>نام</th><th>مراجعه</th><th>تخفیف</th><th>عملیات</th></tr>
-                ${Object.entries(users).map(([phone, data]) => {
-                    const discount = getDiscount(data.visitCount);
-                    return `
-                        <tr>
-                            <td>${phone}</td>
-                            <td>${data.name || '---'}</td>
-                            <td>${data.visitCount}</td>
-                            <td>${discount}%</td>
-                            <td><button class="btn-delete" onclick="deleteUser('${phone}')">🗑️</button></td>
-                        </tr>
-                    `;
-                }).join('')}
-            </table>
+                ${entries.map(([phone, data]) => {
+                    const discount = getDiscount(data.visitCount || 0);
+                    return `<tr><td>${phone}</td><td>${data.name || '---'}</td><td>${data.visitCount || 0}</td><td>${discount}%</td><td><button class="btn-delete" onclick="deleteUser('${phone}')">🗑️</button></td></tr>`;
+                }).join('')}</table>`}
         </div>
     `;
 }
@@ -169,21 +246,12 @@ function renderNumbers() {
     const numbers = getNumbers();
     return `
         <div class="table-container">
-            <h3>
-                📱 لیست شماره‌ها (${numbers.length})
-                <button class="btn-export" onclick="exportNumbers()"><i class="fas fa-file-excel"></i> خروجی اکسل</button>
-            </h3>
+            <h3>📱 لیست شماره‌ها (${numbers.length}) ${numbers.length > 0 ? `<button class="btn-export" onclick="exportNumbers()"><i class="fas fa-file-excel"></i> خروجی اکسل</button>` : ''}</h3>
+            ${numbers.length === 0 ? '<p style="color:#888;">هیچ شماره‌ای ثبت نشده است.</p>' : `
             <table>
                 <tr><th>ردیف</th><th>شماره</th><th>تاریخ ثبت</th><th>عملیات</th></tr>
-                ${numbers.map((num, i) => `
-                    <tr>
-                        <td>${i+1}</td>
-                        <td>${num}</td>
-                        <td>${new Date().toLocaleDateString('fa-IR')}</td>
-                        <td><button class="btn-delete" onclick="deleteNumber('${num}')">🗑️</button></td>
-                    </tr>
-                `).join('')}
-            </table>
+                ${numbers.map((num, i) => `<tr><td>${i+1}</td><td>${num}</td><td>${new Date().toLocaleDateString('fa-IR')}</td><td><button class="btn-delete" onclick="deleteNumber('${num}')">🗑️</button></td></tr>`).join('')}
+            </table>`}
         </div>
     `;
 }
@@ -193,23 +261,12 @@ function renderContacts() {
     const contacts = getContacts();
     return `
         <div class="table-container">
-            <h3>
-                ✉️ لیست پیام‌ها (${contacts.length})
-                <button class="btn-export" onclick="exportContacts()"><i class="fas fa-file-excel"></i> خروجی اکسل</button>
-            </h3>
+            <h3>✉️ لیست پیام‌ها (${contacts.length}) ${contacts.length > 0 ? `<button class="btn-export" onclick="exportContacts()"><i class="fas fa-file-excel"></i> خروجی اکسل</button>` : ''}</h3>
+            ${contacts.length === 0 ? '<p style="color:#888;">هیچ پیامی ثبت نشده است.</p>' : `
             <table>
                 <tr><th>نام</th><th>شماره</th><th>خدمت</th><th>پیام</th><th>تاریخ</th><th>عملیات</th></tr>
-                ${contacts.map((c, i) => `
-                    <tr>
-                        <td>${c.name}</td>
-                        <td>${c.phone}</td>
-                        <td>${c.service}</td>
-                        <td>${c.message || '-'}</td>
-                        <td>${new Date(c.date).toLocaleDateString('fa-IR')}</td>
-                        <td><button class="btn-delete" onclick="deleteContact(${i})">🗑️</button></td>
-                    </tr>
-                `).join('')}
-            </table>
+                ${contacts.map((c, i) => `<tr><td>${c.name}</td><td>${c.phone}</td><td>${c.service}</td><td>${c.message || '-'}</td><td>${new Date(c.date).toLocaleDateString('fa-IR')}</td><td><button class="btn-delete" onclick="deleteContact(${i})">🗑️</button></td></tr>`).join('')}
+            </table>`}
         </div>
     `;
 }
@@ -219,29 +276,211 @@ function renderReservations() {
     const reservations = getReservations();
     return `
         <div class="table-container">
-            <h3>
-                📅 لیست رزروها (${reservations.length})
-                <button class="btn-export" onclick="exportReservations()"><i class="fas fa-file-excel"></i> خروجی اکسل</button>
-            </h3>
+            <h3>📅 لیست رزروها (${reservations.length}) ${reservations.length > 0 ? `<button class="btn-export" onclick="exportReservations()"><i class="fas fa-file-excel"></i> خروجی اکسل</button>` : ''}</h3>
+            ${reservations.length === 0 ? '<p style="color:#888;">هیچ رزروی ثبت نشده است.</p>' : `
             <table>
-                <tr><th>نام</th><th>شماره</th><th>خدمت</th><th>تاریخ رزرو</th><th>وضعیت</th><th>عملیات</th></tr>
+                <tr><th>نام</th><th>شماره</th><th>خدمت</th><th>تاریخ</th><th>وضعیت</th><th>عملیات</th></tr>
                 ${reservations.map((r, i) => `
                     <tr>
-                        <td>${r.name}</td>
+                        <td>${r.name || '---'}</td>
                         <td>${r.phone}</td>
                         <td>${r.service}</td>
-                        <td>${new Date(r.date).toLocaleDateString('fa-IR')} - ${new Date(r.date).toLocaleTimeString('fa-IR')}</td>
+                        <td>${new Date(r.date).toLocaleDateString('fa-IR')}</td>
                         <td><span class="status-${r.status || 'pending'}">${r.status === 'confirmed' ? '✅ تایید' : r.status === 'cancelled' ? '❌ لغو' : '⏳ در انتظار'}</span></td>
                         <td>
-                            <button class="btn-edit" onclick="updateReservation(${i}, 'confirmed')" style="background:#27ae60;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;margin:2px;">✅</button>
-                            <button class="btn-edit" onclick="updateReservation(${i}, 'cancelled')" style="background:#e74c3c;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;margin:2px;">❌</button>
+                            <button onclick="updateReservation(${i}, 'confirmed')" style="background:#27ae60;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;margin:2px;">✅</button>
+                            <button onclick="updateReservation(${i}, 'cancelled')" style="background:#e74c3c;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;margin:2px;">❌</button>
                             <button class="btn-delete" onclick="deleteReservation(${i})">🗑️</button>
                         </td>
                     </tr>
                 `).join('')}
-            </table>
+            </table>`}
         </div>
     `;
+}
+
+// ===== بخش رسانه (عکس و فیلم) =====
+function renderMedia() {
+    return `
+        <div class="media-upload-section">
+            <h3 style="margin-bottom:1rem;">📤 آپلود عکس و فیلم</h3>
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <p>فایل‌های خود را بکشید و اینجا رها کنید</p>
+                <p style="font-size:0.9rem;color:#888;">یا کلیک کنید تا انتخاب کنید</p>
+                <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none;">
+                <div style="margin-top:1rem;">
+                    <button onclick="document.getElementById('fileInput').click()" class="btn-primary" style="border:none;cursor:pointer;padding:12px 30px;">انتخاب فایل</button>
+                </div>
+                <div id="uploadProgress" style="display:none;margin-top:1rem;">
+                    <div class="progress-bar"><div id="progressFill" style="width:0%;height:8px;background:linear-gradient(135deg,#FF1493,#C71585);border-radius:4px;transition:width 0.3s;"></div></div>
+                    <p id="progressText" style="margin-top:0.5rem;color:#888;">در حال آپلود...</p>
+                </div>
+            </div>
+        </div>
+        <div class="media-gallery" id="mediaGallery">
+            <h3 style="margin:2rem 0 1rem;">🖼️ گالری رسانه</h3>
+            <div id="mediaGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.5rem;">
+                <p style="color:#888;grid-column:1/-1;">در حال بارگذاری...</p>
+            </div>
+        </div>
+    `;
+}
+
+// ===== راه‌اندازی آپلود =====
+document.addEventListener('DOMContentLoaded', function() {
+    // رویدادهای آپلود بعد از رندر شدن صفحه
+    setTimeout(() => {
+        setupUploadHandlers();
+        loadMediaGallery();
+    }, 500);
+});
+
+function setupUploadHandlers() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    
+    if (!dropZone || !fileInput) return;
+    
+    // کلیک روی منطقه
+    dropZone.addEventListener('click', function(e) {
+        if (e.target === dropZone || e.target.closest('.upload-icon') || e.target.closest('p')) {
+            fileInput.click();
+        }
+    });
+    
+    // تغییر فایل
+    fileInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            handleFiles(this.files);
+        }
+    });
+    
+    // Drag & Drop
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+        }
+    });
+}
+
+// ===== پردازش فایل‌ها =====
+async function handleFiles(files) {
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    progressDiv.style.display = 'block';
+    
+    let uploaded = 0;
+    const total = files.length;
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const type = file.type.startsWith('video') ? 'video' : 'image';
+        const title = prompt(`عنوان ${type === 'video' ? 'فیلم' : 'عکس'} (${file.name}):`, file.name);
+        if (title === null) continue;
+        
+        try {
+            await saveMediaToDB(file, type, title);
+            uploaded++;
+            const percent = Math.round((uploaded / total) * 100);
+            progressFill.style.width = percent + '%';
+            progressText.textContent = `آپلود شده: ${uploaded} از ${total}`;
+        } catch (error) {
+            console.error('خطا در آپلود:', error);
+            alert(`خطا در آپلود ${file.name}`);
+        }
+    }
+    
+    setTimeout(() => {
+        progressDiv.style.display = 'none';
+        progressFill.style.width = '0%';
+        loadMediaGallery();
+        alert(`✅ ${uploaded} فایل با موفقیت آپلود شد!`);
+    }, 500);
+}
+
+// ===== بارگذاری گالری رسانه =====
+async function loadMediaGallery() {
+    const grid = document.getElementById('mediaGrid');
+    if (!grid) return;
+    
+    try {
+        const mediaItems = await getAllMedia();
+        if (mediaItems.length === 0) {
+            grid.innerHTML = '<p style="color:#888;grid-column:1/-1;">هیچ عکس یا فیلمی آپلود نشده است.</p>';
+            return;
+        }
+        
+        grid.innerHTML = mediaItems.map(item => `
+            <div class="media-item" style="border-radius:15px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.1);position:relative;background:#faf0f5;">
+                ${item.type === 'video' ? `
+                    <video src="${item.data}" style="width:100%;height:200px;object-fit:cover;" controls></video>
+                ` : `
+                    <img src="${item.data}" alt="${item.title}" style="width:100%;height:200px;object-fit:cover;">
+                `}
+                <div style="padding:0.8rem;display:flex;justify-content:space-between;align-items:center;background:white;">
+                    <span style="font-weight:700;font-size:0.9rem;">${item.title}</span>
+                    <div>
+                        <button onclick="downloadMedia(${item.id})" style="background:#3498db;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;margin:2px;"><i class="fas fa-download"></i></button>
+                        <button onclick="deleteMedia(${item.id})" class="btn-delete" style="padding:5px 10px;">🗑️</button>
+                    </div>
+                </div>
+                <div style="padding:0 0.8rem 0.8rem;font-size:0.8rem;color:#888;">
+                    ${item.type === 'video' ? '🎬' : '🖼️'} ${new Date(item.date).toLocaleDateString('fa-IR')}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('خطا در بارگذاری گالری:', error);
+        grid.innerHTML = '<p style="color:#e74c3c;grid-column:1/-1;">خطا در بارگذاری گالری</p>';
+    }
+}
+
+// ===== دانلود رسانه =====
+async function downloadMedia(id) {
+    try {
+        const transaction = mediaDB.transaction(['media'], 'readonly');
+        const store = transaction.objectStore('media');
+        const request = store.get(id);
+        request.onsuccess = function() {
+            const item = request.result;
+            if (item) {
+                const a = document.createElement('a');
+                a.href = item.data;
+                a.download = item.filename || `${item.title}.${item.type === 'video' ? 'mp4' : 'jpg'}`;
+                a.click();
+            }
+        };
+    } catch (error) {
+        console.error('خطا در دانلود:', error);
+        alert('خطا در دانلود فایل');
+    }
+}
+
+// ===== حذف رسانه =====
+async function deleteMedia(id) {
+    if (!confirm('آیا از حذف این فایل مطمئن هستید؟')) return;
+    try {
+        await deleteMediaFromDB(id);
+        loadMediaGallery();
+    } catch (error) {
+        console.error('خطا در حذف:', error);
+        alert('خطا در حذف فایل');
+    }
 }
 
 // ===== تخفیف‌ها =====
@@ -258,7 +497,7 @@ function renderDiscounts() {
                 <tr><td>۱۰ بار</td><td>۱۰٪</td></tr>
             </table>
             <div style="margin-top:1.5rem;padding:1rem;background:#faf0f5;border-radius:10px;">
-                <p>💡 برای تغییر تخفیف‌ها، کد را در فایل script.js ویرایش کنید.</p>
+                <p>💡 تخفیف‌ها به صورت خودکار در زمان رزرو به کاربر اطلاع داده می‌شوند.</p>
             </div>
         </div>
     `;
@@ -319,40 +558,27 @@ function updateReservation(index, status) {
 // ===== خروجی اکسل =====
 function exportNumbers() {
     const numbers = getNumbers();
-    if (numbers.length === 0) {
-        alert('هیچ شماره‌ای برای خروجی وجود ندارد!');
-        return;
-    }
+    if (numbers.length === 0) { alert('هیچ شماره‌ای وجود ندارد!'); return; }
     let csv = 'ردیف,شماره موبایل,تاریخ ثبت\n';
-    numbers.forEach((num, i) => {
-        csv += `${i+1},${num},${new Date().toLocaleDateString('fa-IR')}\n`;
-    });
+    numbers.forEach((num, i) => csv += `${i+1},${num},${new Date().toLocaleDateString('fa-IR')}\n`);
     downloadCSV(csv, 'شماره_مشتریان');
 }
 
 function exportContacts() {
     const contacts = getContacts();
-    if (contacts.length === 0) {
-        alert('هیچ پیامی برای خروجی وجود ندارد!');
-        return;
-    }
+    if (contacts.length === 0) { alert('هیچ پیامی وجود ندارد!'); return; }
     let csv = 'نام,شماره,خدمت,پیام,تاریخ\n';
-    contacts.forEach(c => {
-        csv += `${c.name},${c.phone},${c.service},${c.message || ''},${new Date(c.date).toLocaleDateString('fa-IR')}\n`;
-    });
+    contacts.forEach(c => csv += `${c.name},${c.phone},${c.service},${c.message || ''},${new Date(c.date).toLocaleDateString('fa-IR')}\n`);
     downloadCSV(csv, 'پیام_مشتریان');
 }
 
 function exportReservations() {
     const reservations = getReservations();
-    if (reservations.length === 0) {
-        alert('هیچ رزروی برای خروجی وجود ندارد!');
-        return;
-    }
+    if (reservations.length === 0) { alert('هیچ رزروی وجود ندارد!'); return; }
     let csv = 'نام,شماره,خدمت,تاریخ رزرو,وضعیت\n';
     reservations.forEach(r => {
         const status = r.status === 'confirmed' ? 'تایید' : r.status === 'cancelled' ? 'لغو' : 'در انتظار';
-        csv += `${r.name},${r.phone},${r.service},${new Date(r.date).toLocaleDateString('fa-IR')},${status}\n`;
+        csv += `${r.name || '---'},${r.phone},${r.service},${new Date(r.date).toLocaleDateString('fa-IR')},${status}\n`;
     });
     downloadCSV(csv, 'رزرو_مشتریان');
 }
@@ -368,16 +594,24 @@ function downloadCSV(csv, filename) {
 }
 
 // ===== رویدادهای منو =====
-document.querySelectorAll('.sidebar nav li').forEach(item => {
-    item.addEventListener('click', function() {
-        renderPage(this.dataset.tab);
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.sidebar nav li').forEach(item => {
+        item.addEventListener('click', function() {
+            const tab = this.dataset.tab;
+            if (tab) renderPage(tab);
+        });
     });
 });
 
-// ===== اجرا =====
-document.addEventListener('DOMContentLoaded', () => {
-    // اگر قبلاً وارد شده بود
-    if (document.getElementById('adminPanel').style.display === 'block') {
-        renderPage('dashboard');
-    }
+// ===== وقتی برگه رسانه باز میشه =====
+document.addEventListener('DOMContentLoaded', function() {
+    // بارگذاری مجدد گالری وقتی برگه رسانه فعال میشه
+    const observer = new MutationObserver(function() {
+        const mediaTab = document.querySelector('[data-tab="media"]');
+        if (mediaTab && mediaTab.classList.contains('active')) {
+            setTimeout(loadMediaGallery, 500);
+        }
+    });
+    const sidebar = document.querySelector('.sidebar nav ul');
+    if (sidebar) observer.observe(sidebar, { attributes: true, subtree: true });
 });
